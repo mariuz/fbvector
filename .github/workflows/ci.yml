@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+    name: Build & Test (Linux - ${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up compiler
+      run: |
+        if [ "${{ matrix.compiler }}" = "g++" ]; then
+          sudo apt-get update
+          sudo apt-get install -y g++-11
+          echo "CXX=g++-11" >> $GITHUB_ENV
+        elif [ "${{ matrix.compiler }}" = "clang++" ]; then
+          sudo apt-get update
+          sudo apt-get install -y clang-14
+          echo "CXX=clang++-14" >> $GITHUB_ENV
+        fi
+
+    - name: Install Firebird Developer Headers & Server
+      run: |
+        sudo apt-get update
+        # Pre-seed SYSDBA password for automated installation
+        echo "firebird3.0-server firebird3.0/admin-password password masterkey" | sudo debconf-set-selections
+        echo "firebird3.0-server firebird3.0/enable-server boolean true" | sudo debconf-set-selections
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y firebird-dev firebird3.0-server firebird3.0-utils
+
+    - name: Start Firebird Service
+      run: |
+        sudo service firebird3.0 start || sudo systemctl start firebird3.0
+        # Wait for service to initialize
+        sleep 2
+
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build -j$(nproc)
+
+    - name: Run Unit Tests
+      run: ctest --test-dir build --output-on-failure
+
+    - name: Run Integration Tests
+      run: |
+        # Locate the SYSDBA password from file if debconf seeding didn't set it to masterkey
+        if [ -f /etc/firebird/3.0/SYSDBA.password ]; then
+          FIREBIRD_PASSWORD=$(sudo cat /etc/firebird/3.0/SYSDBA.password | grep "Password =" | cut -d' ' -f3)
+          export FIREBIRD_PASSWORD
+        fi
+        python3 tests/integration/test_integration.py
+
+  build-windows:
+    name: Build & Test (Windows - MSVC 2022)
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download Firebird client zip
+      shell: powershell
+      run: |
+        curl.exe -L -o firebird.zip https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0-windows-x64.zip
+        Expand-Archive -Path firebird.zip -DestinationPath C:\firebird
+
+    - name: Configure CMake
+      shell: powershell
+      run: |
+        cmake -S . -B build `
+          -G "Visual Studio 17 2022" `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DFIREBIRD_INCLUDE_DIR=C:\firebird\include `
+          -DFIREBIRD_CLIENT_LIB=C:\firebird\lib\fbclient.lib `
+          -DFIREBIRD_IB_UTIL_LIB=C:\firebird\lib\ib_util.lib
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Run Unit Tests
+      run: ctest --test-dir build -C Release --output-on-failure
