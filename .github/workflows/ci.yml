@@ -28,34 +28,43 @@ jobs:
           echo "CXX=clang++-14" >> $GITHUB_ENV
         fi
 
-    - name: Install Firebird Developer Headers & Server
+    - name: Download and Install Firebird 6 Snapshot
       run: |
         sudo apt-get update
-        # Pre-seed SYSDBA password for automated installation
-        echo "firebird3.0-server firebird3.0/admin-password password masterkey" | sudo debconf-set-selections
-        echo "firebird3.0-server firebird3.0/enable-server boolean true" | sudo debconf-set-selections
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y firebird-dev firebird3.0-server firebird3.0-utils
+        sudo apt-get install -y libicu-dev libncurses5 libtommath1 || sudo apt-get install -y libicu-dev libncurses6 libtommath1
+        URL=$(curl -s https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master | python3 -c "import sys, json; data = json.load(sys.stdin); print(next(a['browser_download_url'] for a in data['assets'] if 'linux-x64.tar.gz' in a['name'] and 'debugSymbols' not in a['name']))")
+        echo "Downloading Firebird 6 snapshot from: $URL"
+        wget -q -O firebird6.tar.gz "$URL"
+        tar -zxf firebird6.tar.gz
+        DIR_NAME=$(tar -tf firebird6.tar.gz | head -n 1 | cut -f1 -d"/")
+        cd "$DIR_NAME"
+        sudo ./install.sh -silent
 
     - name: Start Firebird Service
       run: |
-        sudo service firebird3.0 start || sudo systemctl start firebird3.0
-        # Wait for service to initialize
+        sudo systemctl start firebird || sudo service firebird start
         sleep 2
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      run: |
+        export LD_LIBRARY_PATH=/opt/firebird/lib
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build -j$(nproc)
+      run: |
+        export LD_LIBRARY_PATH=/opt/firebird/lib
+        cmake --build build -j$(nproc)
 
     - name: Run Unit Tests
-      run: ctest --test-dir build --output-on-failure
+      run: |
+        export LD_LIBRARY_PATH=/opt/firebird/lib
+        ctest --test-dir build --output-on-failure
 
     - name: Run Integration Tests
       run: |
-        # Locate the SYSDBA password from file if debconf seeding didn't set it to masterkey
-        if [ -f /etc/firebird/3.0/SYSDBA.password ]; then
-          FIREBIRD_PASSWORD=$(sudo cat /etc/firebird/3.0/SYSDBA.password | grep "Password =" | cut -d' ' -f3)
+        export LD_LIBRARY_PATH=/opt/firebird/lib
+        if [ -f /opt/firebird/SYSDBA.password ]; then
+          FIREBIRD_PASSWORD=$(sudo cat /opt/firebird/SYSDBA.password | grep "ISC_PASSWORD=" | cut -d'=' -f2)
           export FIREBIRD_PASSWORD
         fi
         python3 tests/integration/test_integration.py
