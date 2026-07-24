@@ -24,8 +24,8 @@ jobs:
           echo "CXX=g++-11" >> $GITHUB_ENV
         elif [ "${{ matrix.compiler }}" = "clang++" ]; then
           sudo apt-get update
-          sudo apt-get install -y clang-14
-          echo "CXX=clang++-14" >> $GITHUB_ENV
+          sudo apt-get install -y clang-16
+          echo "CXX=clang++-16" >> $GITHUB_ENV
         fi
 
     - name: Download and Install Firebird 6 Snapshot
