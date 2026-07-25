@@ -9,7 +9,8 @@ $ErrorActionPreference = "Stop"
 # Resolve absolute paths
 $StageDir = New-Item -ItemType Directory -Force -Path "wix_stage"
 $StageDirAbs = [System.IO.Path]::GetFullPath($StageDir.FullName)
-$BuildDirAbs = [System.IO.Path]::GetFullPath($BuildDir)
+$resolvedPath = if ([System.IO.Path]::IsPathRooted($BuildDir)) { $BuildDir } else { Join-Path $PSScriptRoot $BuildDir }
+$BuildDirAbs = [System.IO.Path]::GetFullPath($resolvedPath)
 
 Write-Host "Staging files from $BuildDirAbs to $StageDirAbs..."
 
