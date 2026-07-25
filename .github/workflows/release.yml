@@ -78,7 +78,6 @@ jobs:
       run: |
         mkdir package
         copy build\lib\Release\fbvector.dll package\
-        copy build\bin\Release\fbvector_sidecar.exe package\
         copy sql\install.sql package\
         Compress-Archive -Path package\* -DestinationPath fbvector-${{ github.ref_name }}-windows-x64.zip
         

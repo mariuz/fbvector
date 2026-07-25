@@ -151,6 +151,6 @@ endif()
 # Optional External ANN Index Sidecar Daemon
 # ==========================================
 option(BUILD_SIDECAR "Build the optional External ANN Index Sidecar daemon" OFF)
-if(BUILD_SIDECAR)
+if(BUILD_SIDECAR AND NOT WIN32)
     add_subdirectory(sidecar)
 endif()

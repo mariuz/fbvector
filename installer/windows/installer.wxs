@@ -28,7 +28,6 @@
                     <Directory Id="UdrDir" Name="udr">
                         <Component Id="UdrPluginComponent" Guid="e3fa18b2-3c81-420a-8a1a-bb198eaf3028" Win64="yes">
                             <File Id="FbVectorDll" Source="$(var.StageDir)\fbvector.dll" KeyPath="yes" />
-                            <File Id="FbVectorSidecar" Source="$(var.StageDir)\fbvector_sidecar.exe" />
                         </Component>
                     </Directory>
                 </Directory>

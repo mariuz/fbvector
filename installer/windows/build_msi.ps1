@@ -15,13 +15,6 @@ Write-Host "Staging files from $BuildDirAbs to $StageDirAbs..."
 
 # Copy binaries from the release folder
 Copy-Item "$BuildDirAbs\lib\Release\fbvector.dll" -Destination $StageDirAbs
-if (Test-Path "$BuildDirAbs\bin\Release\fbvector_sidecar.exe") {
-    Copy-Item "$BuildDirAbs\bin\Release\fbvector_sidecar.exe" -Destination $StageDirAbs
-} else {
-    # Create a dummy file if sidecar is not built to satisfy WiX requirements
-    # (Though in our release step, sidecar is always built)
-    New-Item -ItemType File -Force -Path "$StageDirAbs\fbvector_sidecar.exe" -Value ""
-}
 
 # Run Candle
 $wixPath = if ($env:WIX) { "${env:WIX}bin\" } else { "" }
