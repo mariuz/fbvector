@@ -1,0 +1,95 @@
+name: Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Package Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    steps:
+    - uses: actions/checkout@v4
+
+    # Setup compilers and dependencies
+    - name: Set up dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libicu-dev libncurses5 libtommath1 || sudo apt-get install -y libicu-dev libncurses6 libtommath1
+        URL=$(curl -s https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master | python3 -c "import sys, json; data = json.load(sys.stdin); print(next(a['browser_download_url'] for a in data['assets'] if 'linux-x64.tar.gz' in a['name'] and 'debugSymbols' not in a['name']))")
+        wget -q -O firebird6.tar.gz "$URL"
+        tar -zxf firebird6.tar.gz
+        DIR_NAME=$(tar -tf firebird6.tar.gz | head -n 1 | cut -f1 -d"/")
+        cd "$DIR_NAME"
+        sudo ./install.sh -silent
+
+    - name: Download Firebird client zip (Windows)
+      if: matrix.os == 'windows-2022'
+      shell: powershell
+      run: |
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master"
+        $asset = $release.assets | Where-Object { $_.name -like "Firebird-6.0.0.*-windows-x64.zip" -and $_.name -notlike "*withDebugSymbols*" } | Select-Object -First 1
+        $url = $asset.browser_download_url
+        curl.exe -L -o firebird.zip $url
+        Expand-Archive -Path firebird.zip -DestinationPath C:\firebird
+
+    # Compile the extension (including sidecar)
+    - name: Configure and Build (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        export LD_LIBRARY_PATH=/opt/firebird/lib
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SIDECAR=ON
+        cmake --build build -j$(nproc)
+
+    - name: Configure and Build (Windows)
+      if: matrix.os == 'windows-2022'
+      shell: powershell
+      run: |
+        cmake -S . -B build `
+          -G "Visual Studio 17 2022" `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DBUILD_SIDECAR=ON `
+          -DFIREBIRD_INCLUDE_DIR=C:\firebird\include `
+          -DFIREBIRD_CLIENT_LIB=C:\firebird\lib\fbclient_ms.lib `
+          -DFIREBIRD_IB_UTIL_LIB=C:\firebird\lib\ib_util_ms.lib
+        cmake --build build --config Release
+
+    # Package files
+    - name: Package Assets (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        mkdir -p package
+        cp build/lib/libfbvector.so package/
+        cp build/bin/fbvector_sidecar package/
+        cp sql/install.sql package/
+        tar -czf fbvector-${{ github.ref_name }}-linux-x64.tar.gz -C package .
+
+    - name: Package Assets (Windows)
+      if: matrix.os == 'windows-2022'
+      shell: powershell
+      run: |
+        mkdir package
+        copy build\lib\Release\fbvector.dll package\
+        copy build\bin\Release\fbvector_sidecar.exe package\
+        copy sql\install.sql package\
+        Compress-Archive -Path package\* -DestinationPath fbvector-${{ github.ref_name }}-windows-x64.zip
+
+    # Upload to Release
+    - name: Create or Update GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          fbvector-*.tar.gz
+          fbvector-*.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

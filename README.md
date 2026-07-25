@@ -83,10 +83,24 @@ python3 tests/integration/test_integration.py
 
 ## Installing the Extension
 
-1. **Deploy UDR Library**: Copy the compiled shared library to your Firebird installation's UDR plugins directory:
-   * **Linux (Manual)**: `sudo cp build/lib/libfbvector.so /opt/firebird/plugins/udr/`
-   * **Linux (Ubuntu Package)**: `sudo cp build/lib/libfbvector.so /usr/lib/firebird/3.0/plugins/udr/`
-   * **Windows**: Copy `fbvector.dll` to `C:\Program Files\Firebird\Firebird_X_X\plugins\udr\`
+### Option A: Using Pre-built Release Binaries
+
+1. **Download Release Package**: Visit [GitHub Releases](https://github.com/mariuz/fbvector/releases) and download the compiled archive matching your system:
+   * **Linux**: `fbvector-v1.0.0-linux-x64.tar.gz` (includes `libfbvector.so`, `fbvector_sidecar` daemon, and `install.sql`)
+   * **Windows**: `fbvector-v1.0.0-windows-x64.zip` (includes `fbvector.dll`, `fbvector_sidecar.exe` daemon, and `install.sql`)
+2. **Extract & Copy to Plugins**: Copy the library file to your Firebird installation's UDR plugins directory:
+   * **Linux**: `sudo cp libfbvector.so /opt/firebird/plugins/udr/`
+   * **Windows**: Copy `fbvector.dll` to `C:\Program Files\Firebird\Firebird_5_0\plugins\udr\` (or your Firebird 6 path).
+3. **Register UDR Functions**: Execute the registration script inside your database:
+   ```bash
+   /opt/firebird/bin/isql -user sysdba -password <your_password> -input install.sql your_database.fdb
+   ```
+
+### Option B: Building from Source
+
+1. **Deploy Compiled UDR Library**: Copy the compiled shared library from your `build/` directory:
+   * **Linux**: `sudo cp build/lib/libfbvector.so /opt/firebird/plugins/udr/`
+   * **Windows**: Copy `fbvector.dll` to `C:\Program Files\Firebird\Firebird_5_0\plugins\udr\` (or your Firebird 6 path).
 
 2. **Register UDR Functions**: Register the external functions in your database by running the installation SQL script:
    ```bash
