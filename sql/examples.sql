@@ -94,3 +94,40 @@ SELECT
     vector_norm(embedding) AS magnitude
 FROM item_embeddings
 WHERE vector_norm(embedding) BETWEEN 0.95 AND 1.05;
+
+-- =============================================================================
+-- NEW EXAMPLES (v1.0 ADDITIONS)
+-- =============================================================================
+
+-- 9. Metadata Filtering / Hybrid Search Query
+-- Combines text prefix match or structured categories with vector calculations.
+SELECT 
+    id, 
+    title,
+    vector_cosine_distance(embedding, vector_from_text('[0.10, -0.40, 0.90, 0.10]')) AS score
+FROM item_embeddings
+WHERE title LIKE 'Art%' OR description LIKE '%C++%'
+ORDER BY score ASC;
+
+-- 10. Optional Real-Time Sidecar Sync Trigger Setup
+-- Automatically notifies the optional background sidecar daemon (fbvector_sidecar) 
+-- on inserts, updates, and deletes to keep the in-memory HNSW ANN graph in sync.
+
+-- A. Trigger for Insert and Update operations
+CREATE OR ALTER TRIGGER trg_item_embeddings_sync_aiu FOR item_embeddings
+ACTIVE AFTER INSERT OR UPDATE POSITION 100
+AS
+BEGIN
+    -- Call the sidecar notifier UDR: action = 1 (Insert/Update)
+    SELECT vector_sidecar_sync(new.id, 1, new.embedding) FROM rdb$database;
+END;
+
+-- B. Trigger for Delete operations
+CREATE OR ALTER TRIGGER trg_item_embeddings_sync_ad FOR item_embeddings
+ACTIVE AFTER DELETE POSITION 100
+AS
+BEGIN
+    -- Call the sidecar notifier UDR: action = 2 (Delete)
+    SELECT vector_sidecar_sync(old.id, 2, NULL) FROM rdb$database;
+END;
+

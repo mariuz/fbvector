@@ -117,7 +117,7 @@ FROM products
 ORDER BY dist ASC;
 ```
 
-For more advanced query examples and expression index optimization, see [sql/examples.sql](file:///home/ubuntu/work/fbvector/sql/examples.sql).
+For more advanced query examples, python integration tutorials, and expression index optimization, see [docs/examples.md](file:///home/ubuntu/work/fbvector/docs/examples.md) and [sql/examples.sql](file:///home/ubuntu/work/fbvector/sql/examples.sql).
 
 ## Future Roadmap (Post-v1.0 Considerations)
 * **Scalar Quantization (SQ8)**: Compress float32 vectors to int8 to reduce BLOB storage footprints by 4x.
