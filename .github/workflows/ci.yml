@@ -39,6 +39,7 @@ jobs:
         DIR_NAME=$(tar -tf firebird6.tar.gz | head -n 1 | cut -f1 -d"/")
         cd "$DIR_NAME"
         sudo ./install.sh -silent
+        echo "DatabaseAccess = Full" | sudo tee -a /opt/firebird/firebird.conf
 
     - name: Start Firebird Service
       run: |
