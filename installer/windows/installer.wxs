@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Name="fbvector UDR Extension" Language="1033" Version="$(var.Version)" Manufacturer="mariuz" UpgradeCode="a9f3b1a8-8e6f-474d-91b4-219df8ef24b2">
+        <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+        <MediaTemplate EmbedCab="yes" />
+
+        <!-- Registry Search for Firebird Installation Path -->
+        <Property Id="FIREBIRD_PATH">
+            <RegistrySearch Id="FindFirebirdPath"
+                            Root="HKLM"
+                            Key="SOFTWARE\Firebird Project\Firebird Server\Instances"
+                            Name="DefaultInstance"
+                            Type="directory" />
+        </Property>
+
+        <!-- Condition to check if Firebird is installed -->
+        <Condition Message="Firebird installation was not detected in the registry. Please install Firebird before installing fbvector.">
+            <![CDATA[Installed OR FIREBIRD_PATH]]>
+        </Condition>
+
+        <!-- Directory structure -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="FIREBIRD_PATH" Name="Firebird">
+                <Directory Id="PluginsDir" Name="plugins">
+                    <Directory Id="UdrDir" Name="udr">
+                        <Component Id="UdrPluginComponent" Guid="e3fa18b2-3c81-420a-8a1a-bb198eaf3028" Win64="yes">
+                            <File Id="FbVectorDll" Source="$(var.StageDir)\fbvector.dll" KeyPath="yes" />
+                            <File Id="FbVectorSidecar" Source="$(var.StageDir)\fbvector_sidecar.exe" />
+                        </Component>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <Feature Id="ProductFeature" Title="fbvector UDR Plugin" Level="1">
+            <ComponentRef Id="UdrPluginComponent" />
+        </Feature>
+    </Product>
+</Wix>

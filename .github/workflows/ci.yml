@@ -109,12 +109,19 @@ jobs:
         cmake -S . -B build `
           -G "Visual Studio 17 2022" `
           -DCMAKE_BUILD_TYPE=Release `
+          -DBUILD_SIDECAR=ON `
           -DFIREBIRD_INCLUDE_DIR=C:\firebird\include `
           -DFIREBIRD_CLIENT_LIB=C:\firebird\lib\fbclient_ms.lib `
           -DFIREBIRD_IB_UTIL_LIB=C:\firebird\lib\ib_util_ms.lib
 
     - name: Build
       run: cmake --build build --config Release
+
+    - name: Build MSI Installer
+      shell: powershell
+      run: |
+        cd installer/windows
+        ./build_msi.ps1 -BuildDir "../../build" -Version "1.0.0"
 
     - name: Run Unit Tests
       run: ctest --test-dir build -C Release --output-on-failure

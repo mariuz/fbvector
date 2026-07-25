@@ -81,6 +81,12 @@ jobs:
         copy build\bin\Release\fbvector_sidecar.exe package\
         copy sql\install.sql package\
         Compress-Archive -Path package\* -DestinationPath fbvector-${{ github.ref_name }}-windows-x64.zip
+        
+        # Build MSI Installer
+        cd installer/windows
+        $ver = "${{ github.ref_name }}".TrimStart("v")
+        ./build_msi.ps1 -BuildDir "../../build" -Version $ver
+        move "fbvector-$ver-x64.msi" "../../"
 
     # Upload to Release
     - name: Create or Update GitHub Release
@@ -89,6 +95,7 @@ jobs:
         files: |
           fbvector-*.tar.gz
           fbvector-*.zip
+          fbvector-*.msi
         draft: false
         prerelease: false
       env:

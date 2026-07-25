@@ -1,0 +1,35 @@
+# build_msi.ps1
+param (
+    [string]$BuildDir = "..\..\build",
+    [string]$Version = "1.0.0"
+)
+
+$ErrorActionPreference = "Stop"
+
+# Resolve absolute paths
+$StageDir = New-Item -ItemType Directory -Force -Path "wix_stage"
+$StageDirAbs = [System.IO.Path]::GetFullPath($StageDir.FullName)
+$BuildDirAbs = [System.IO.Path]::GetFullPath($BuildDir)
+
+Write-Host "Staging files from $BuildDirAbs to $StageDirAbs..."
+
+# Copy binaries from the release folder
+Copy-Item "$BuildDirAbs\lib\Release\fbvector.dll" -Destination $StageDirAbs
+if (Test-Path "$BuildDirAbs\bin\Release\fbvector_sidecar.exe") {
+    Copy-Item "$BuildDirAbs\bin\Release\fbvector_sidecar.exe" -Destination $StageDirAbs
+} else {
+    # Create a dummy file if sidecar is not built to satisfy WiX requirements
+    # (Though in our release step, sidecar is always built)
+    New-Item -ItemType File -Force -Path "$StageDirAbs\fbvector_sidecar.exe" -Value ""
+}
+
+# Run Candle
+$wixPath = if ($env:WIX) { "${env:WIX}bin\" } else { "" }
+Write-Host "Running Candle..."
+& "${wixPath}candle.exe" -dVersion=$Version -dStageDir="$StageDirAbs" -o wix_stage\installer.wixobj installer.wxs
+
+# Run Light
+Write-Host "Running Light..."
+& "${wixPath}light.exe" wix_stage\installer.wixobj -out "fbvector-$Version-x64.msi"
+
+Write-Host "MSI Installer built successfully: fbvector-$Version-x64.msi"
