@@ -94,8 +94,8 @@ jobs:
           -G "Visual Studio 17 2022" `
           -DCMAKE_BUILD_TYPE=Release `
           -DFIREBIRD_INCLUDE_DIR=C:\firebird\include `
-          -DFIREBIRD_CLIENT_LIB=C:\firebird\lib\fbclient.lib `
-          -DFIREBIRD_IB_UTIL_LIB=C:\firebird\lib\ib_util.lib
+          -DFIREBIRD_CLIENT_LIB=C:\firebird\lib\fbclient_ms.lib `
+          -DFIREBIRD_IB_UTIL_LIB=C:\firebird\lib\ib_util_ms.lib
 
     - name: Build
       run: cmake --build build --config Release
