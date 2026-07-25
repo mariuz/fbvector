@@ -62,7 +62,10 @@ jobs:
 
     - name: Run Integration Tests
       run: |
+        sudo mkdir -p /opt/firebird/test_db
+        sudo chmod 777 /opt/firebird/test_db
         export LD_LIBRARY_PATH=/opt/firebird/lib
+        export TMPDIR=/opt/firebird/test_db
         if [ -f /opt/firebird/SYSDBA.password ]; then
           FIREBIRD_PASSWORD=$(sudo cat /opt/firebird/SYSDBA.password | grep "ISC_PASSWORD=" | cut -d'=' -f2)
           export FIREBIRD_PASSWORD
