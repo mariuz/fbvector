@@ -43,7 +43,7 @@ jobs:
 
     - name: Start Firebird Service
       run: |
-        sudo systemctl start firebird || sudo service firebird start
+        sudo systemctl restart firebird || sudo service firebird restart
         sleep 2
 
     - name: Configure CMake
