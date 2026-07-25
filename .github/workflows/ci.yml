@@ -63,15 +63,17 @@ jobs:
 
     - name: Run Integration Tests
       run: |
+        sudo usermod -aG firebird runner
         sudo mkdir -p /opt/firebird/test_db
         sudo chmod 777 /opt/firebird/test_db
+        sudo chmod -R 777 /tmp/firebird || true
         export LD_LIBRARY_PATH=/opt/firebird/lib
         export TMPDIR=/opt/firebird/test_db
         if [ -f /opt/firebird/SYSDBA.password ]; then
           FIREBIRD_PASSWORD=$(sudo cat /opt/firebird/SYSDBA.password | grep "ISC_PASSWORD=" | cut -d'=' -f2)
           export FIREBIRD_PASSWORD
         fi
-        python3 tests/integration/test_integration.py
+        sg firebird -c "python3 tests/integration/test_integration.py"
 
   build-windows:
     name: Build & Test (Windows - MSVC 2022)
@@ -82,7 +84,7 @@ jobs:
     - name: Download Firebird client zip
       shell: powershell
       run: |
-        curl.exe -L -o firebird.zip https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0-windows-x64.zip
+        curl.exe -L -o firebird.zip https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0-x64.zip
         Expand-Archive -Path firebird.zip -DestinationPath C:\firebird
 
     - name: Configure CMake
