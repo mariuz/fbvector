@@ -14,7 +14,7 @@ $BuildDirAbs = [System.IO.Path]::GetFullPath($BuildDir)
 Write-Host "Staging files from $BuildDirAbs to $StageDirAbs..."
 
 # Copy binaries from the release folder
-Copy-Item "$BuildDirAbs\lib\Release\fbvector.dll" -Destination $StageDirAbs
+Copy-Item "$BuildDirAbs\bin\Release\fbvector.dll" -Destination $StageDirAbs
 
 # Run Candle
 $wixPath = if ($env:WIX) { "${env:WIX}bin\" } else { "" }
