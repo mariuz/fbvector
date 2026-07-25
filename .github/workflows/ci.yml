@@ -8,11 +8,12 @@ on:
 
 jobs:
   build-linux:
-    name: Build & Test (Linux - ${{ matrix.compiler }})
+    name: Build & Test (Linux - ${{ matrix.compiler }} - FB ${{ matrix.firebird_version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         compiler: [g++, clang++]
+        firebird_version: [5, 6]
     steps:
     - uses: actions/checkout@v4
 
@@ -28,15 +29,19 @@ jobs:
           echo "CXX=clang++-16" >> $GITHUB_ENV
         fi
 
-    - name: Download and Install Firebird 6 Snapshot
+    - name: Download and Install Firebird
       run: |
         sudo apt-get update
         sudo apt-get install -y libicu-dev libncurses5 libtommath1 || sudo apt-get install -y libicu-dev libncurses6 libtommath1
-        URL=$(curl -s https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master | python3 -c "import sys, json; data = json.load(sys.stdin); print(next(a['browser_download_url'] for a in data['assets'] if 'linux-x64.tar.gz' in a['name'] and 'debugSymbols' not in a['name']))")
-        echo "Downloading Firebird 6 snapshot from: $URL"
-        wget -q -O firebird6.tar.gz "$URL"
-        tar -zxf firebird6.tar.gz
-        DIR_NAME=$(tar -tf firebird6.tar.gz | head -n 1 | cut -f1 -d"/")
+        if [ "${{ matrix.firebird_version }}" = "5" ]; then
+          URL="https://github.com/FirebirdSQL/firebird/releases/download/v5.0.4/Firebird-5.0.4.1812-0-linux-x64.tar.gz"
+        else
+          URL=$(curl -s https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master | python3 -c "import sys, json; data = json.load(sys.stdin); print(next(a['browser_download_url'] for a in data['assets'] if 'linux-x64.tar.gz' in a['name'] and 'debugSymbols' not in a['name']))")
+        fi
+        echo "Downloading Firebird ${{ matrix.firebird_version }} from: $URL"
+        wget -q -O firebird.tar.gz "$URL"
+        tar -zxf firebird.tar.gz
+        DIR_NAME=$(tar -tf firebird.tar.gz | head -n 1 | cut -f1 -d"/")
         cd "$DIR_NAME"
         sudo ./install.sh -silent
         echo "DatabaseAccess = Full" | sudo tee -a /opt/firebird/firebird.conf
@@ -76,15 +81,26 @@ jobs:
         sg firebird -c "python3 tests/integration/test_integration.py"
 
   build-windows:
-    name: Build & Test (Windows - MSVC 2022)
+    name: Build & Test (Windows - MSVC 2022 - FB ${{ matrix.firebird_version }})
     runs-on: windows-2022
+    strategy:
+      matrix:
+        firebird_version: [5, 6]
     steps:
     - uses: actions/checkout@v4
 
     - name: Download Firebird client zip
       shell: powershell
       run: |
-        curl.exe -L -o firebird.zip https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0-x64.zip
+        if ("${{ matrix.firebird_version }}" -eq "5") {
+          $url = "https://github.com/FirebirdSQL/firebird/releases/download/v5.0.4/Firebird-5.0.4.1812-0-windows-x64.zip"
+        } else {
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/FirebirdSQL/snapshots/releases/tags/snapshot-master"
+          $asset = $release.assets | Where-Object { $_.name -like "Firebird-6.0.0.*-windows-x64.zip" -and $_.name -notlike "*withDebugSymbols*" } | Select-Object -First 1
+          $url = $asset.browser_download_url
+        }
+        Write-Host "Downloading Firebird client from $url"
+        curl.exe -L -o firebird.zip $url
         Expand-Archive -Path firebird.zip -DestinationPath C:\firebird
 
     - name: Configure CMake

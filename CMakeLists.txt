@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# On MSVC, remove global /EHsc flag so Google Highway can disable exceptions
+# without triggering D9025 command line warning overrides.
+if(MSVC)
+    string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "" FORCE)
+endif()
+
 # Enable position-independent code for shared libraries
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -58,6 +65,10 @@ add_library(fbvector SHARED
     src/udr_entry.cpp
 )
 
+set_target_properties(fbvector PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+)
+
 target_include_directories(fbvector PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
@@ -73,7 +84,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     )
 elseif(MSVC)
     target_compile_options(fbvector PRIVATE
-        /W4 /O2 /fp:fast
+        /W4 /O2 /fp:fast /EHsc
     )
 endif()
 
@@ -128,6 +139,8 @@ if(BUILD_TESTING)
     # Compiler-specific flags for tests
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(fbvector_tests PRIVATE -Wall -Wextra)
+    elseif(MSVC)
+        target_compile_options(fbvector_tests PRIVATE /EHsc)
     endif()
 
     include(GoogleTest)
