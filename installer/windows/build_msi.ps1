@@ -17,10 +17,12 @@ Write-Host "Staging files from $BuildDirAbs to $StageDirAbs..."
 # Copy binaries from the release folder
 Copy-Item "$BuildDirAbs\bin\Release\fbvector.dll" -Destination $StageDirAbs
 
+Write-Host "Version to build: $Version"
+
 # Run Candle
 $wixPath = if ($env:WIX) { "${env:WIX}bin\" } else { "" }
 Write-Host "Running Candle..."
-& "${wixPath}candle.exe" -dVersion=$Version -dStageDir="$StageDirAbs" -o wix_stage\installer.wixobj installer.wxs
+& "${wixPath}candle.exe" "-dVersion=$Version" "-dStageDir=$StageDirAbs" -o wix_stage\installer.wixobj installer.wxs
 
 # Run Light
 Write-Host "Running Light..."
